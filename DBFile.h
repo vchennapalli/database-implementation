@@ -35,14 +35,20 @@ public:
 
 	// int Create (char *fpath, fType file_type, void *startup);
 	int Open (const char *fpath);
+
+	// closes the DBFile
 	int Close ();
 
 	//bulk loads the DBFile instance from a text file given in loadpath
 	void Load (Schema &myschema, const char *loadpath);
 
 	void MoveFirst ();
+
 	void Add (Record &addme);
+
+	// switches from write mode to read mode
 	void SwitchToReadMode(Record &fetchme);
+	
 	int GetNext (Record &fetchme);
 	int GetNext (Record &fetchme, CNF &cnf, Record &literal);
 

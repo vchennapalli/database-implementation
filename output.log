@@ -1,3 +1,7 @@
+
+
+
+
 execlog file:
 --------------
 The expected output along with execution time for the predicates in files q1,...,q12 is given below. The queries were executed on postgres. The execution times given are only a ballpark. Don't worry if your program takes longer time to finish.

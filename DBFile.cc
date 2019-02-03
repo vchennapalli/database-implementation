@@ -9,8 +9,6 @@
 #include "fstream"
 #include "iostream"
 
-// stub file .. replace it with your own DBFile.cc
-
 DBFile::DBFile () {
     readPageIdx = 0;
     readRecordIdx = 0;
@@ -24,9 +22,6 @@ DBFile::DBFile () {
 }
 
 int DBFile::Create (const char *f_path, fType f_type, void *startup) {
-// int DBFile::Create (char *f_path, fType f_type, void *startup) {
-    //DOUBT: const type
-    //DOUBT: when will return be 0
 
     fileType = f_type;
     
@@ -34,10 +29,10 @@ int DBFile::Create (const char *f_path, fType f_type, void *startup) {
 
     return 1;
     
-    //TODO: write metadata to a f_path.header file
 
 }
 
+//loads the file given at *loadpath
 void DBFile::Load (Schema &f_schema, const char *loadpath) {
     FILE *tableFile = fopen(loadpath, "r");
     Record temp;
@@ -58,6 +53,7 @@ int DBFile::Open (const char *f_path) {
     //DOUBT When will it return 0
 }
 
+// moves the pointer to first record in the file
 void DBFile::MoveFirst () {
     readPageIdx = 0;
     readRecordIdx = 0;
@@ -84,14 +80,14 @@ int DBFile::Close () {
     page->EmptyItOut();
     
     numPages = file->GetLength();
-    // TODO: Write metadata into the auxilary file.
 
     file->Close();
 
-    //DOUBT When could return value be 0?
     return 1;
 }
 
+
+// adds a new record to the page
 void DBFile::Add (Record &rec) {
     if (rwMode == read) {
         off_t fileLen = file->GetLength();
@@ -101,8 +97,6 @@ void DBFile::Add (Record &rec) {
         rwMode = write;
     }
 
-    // Record* rec_copy;
-    // rec_copy->Copy(&rec);
 
     if (!(page->Append(&rec))) {
         off_t fileLen = file->GetLength();
@@ -116,9 +110,9 @@ void DBFile::Add (Record &rec) {
         page->EmptyItOut();
         page->Append(&rec);
     }
-    // rec_copy = NULL;
 }
 
+//reads in the next record from the DBFile
 int DBFile::GetNext (Record &fetchme) {
     if (rwMode == write) {
         this->SwitchToReadMode(fetchme);
@@ -142,6 +136,7 @@ int DBFile::GetNext (Record &fetchme) {
     }
 }
 
+// reads in the specific record satisfying the CNF from the DBFile
 int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
     if (rwMode == write) {
         this->SwitchToReadMode(fetchme);
