@@ -30,13 +30,14 @@ public:
 	// records from it
 	void FromBinary (char *bits);
 
-	// the deletes the first record from a page and returns it; returns
+	// this deletes the first record from a page and returns it; returns
 	// a zero if there were no records on the page
 	int GetFirst (Record *firstOne);
 
 	// this appends the record to the end of a page.  The return value
-	// is a one on success and a aero if there is no more space
+	// is a one on success and a zero if there is no more space
 	// note that the record is consumed so it will have no value after
+	// the operation
 	int Append (Record *addMe);
 
 	// empty it out
@@ -64,7 +65,7 @@ public:
 	// the file; if notNew is zero, then the file is created and any other
 	// file located at that location is erased.  Otherwise, the file is
 	// simply opened
-	void Open (int length, char *fName);
+	void Open (int length, const char *fName);
 
 	// allows someone to explicitly get a specified page from the file
 	void GetPage (Page *putItHere, off_t whichPage);

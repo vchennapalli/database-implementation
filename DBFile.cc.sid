@@ -1,0 +1,177 @@
+#include "TwoWayList.h"
+#include "Record.h"
+#include "Schema.h"
+#include "File.h"
+#include "Comparison.h"
+#include "ComparisonEngine.h"
+#include "DBFile.h"
+#include "Defs.h"
+#include <iostream>
+#include <fstream>
+#include <stdlib.h>  // exit 
+using namespace::std;
+
+DBFile::DBFile () {
+  read_page_idx = 0;
+  records_read = 0;
+  mode = write;
+  heap = new (std::nothrow) File();
+	if (heap == NULL)
+	{
+		cout << "ERROR : Not enough memory for heapfile. EXIT !!!\n";
+		exit(1);
+	}
+
+  page = new (std::nothrow) Page();
+	if (page == NULL)
+	{
+		cout << "ERROR : Not enough memory for page. EXIT !!!\n";
+		exit(1);
+	}
+  
+  temp_page = new (std::nothrow) Page();
+	if (temp_page == NULL)
+	{
+		cout << "ERROR : Not enough memory for page. EXIT !!!\n";
+		exit(1);
+	}
+
+}
+
+int DBFile::Create (const char *f_path, fType f_type, void *startup) {
+  // opening file if present, else creating
+  f.open(f_path);
+  if (f.is_open())
+    heap->Open(1, f_path); // open file
+  else
+    heap->Open(0, f_path); // create file
+  
+  mode = write; 
+  cout << "create exit\n\n";
+  return 1;
+}
+
+void DBFile::Load (Schema &f_schema, const char *loadpath) {
+  // bulk load records from loadpath
+  // call of Add in a loop till file end
+  FILE *tablefile = fopen(loadpath, "r");
+  if (!tablefile){
+    cout << "ERROR : Failed to open loadfile\n";
+    exit(1);
+  }
+
+  Record temp;
+  //cout << "load entered\n";
+  while(temp.SuckNextRecord (&f_schema, tablefile) == 1 )
+    this->Add(temp);
+
+}
+
+int DBFile::Open (const char *f_path) {
+  // open the created file, else a new file would be created
+  f.open(f_path);
+  if(f.is_open())
+    heap->Open(1, f_path);
+  else
+    heap->Open(0, f_path);
+  
+  mode = read;
+  this->MoveFirst();
+  return 1;
+}
+
+void DBFile::MoveFirst () {
+  // get the first page from File if current page not first page
+  if (heap->GetLength() > 0){
+    page->EmptyItOut();
+    heap->GetPage(page, 0);
+    mode = read;
+  }
+  records_read = 0; // by setting this counter to 0, getNext shall begin at first record
+}
+
+int DBFile::Close () {
+  // if read mode on, load the saved written page in page
+  // write page to file as it might be dirty
+  // call file close
+  if (mode == read){
+    page->EmptyItOut();
+    *page = *temp_page;
+  }
+
+  heap->AddPage(page, heap->GetLength() ); 
+  
+  if(heap->Close()) // if file closed, it would return number of pages which is > 0
+    return 1;
+
+  return 0; // else return 0
+}
+
+void DBFile::Add (Record &rec) {
+
+  // if mode was read, retreieve last written page, load in page
+  if (mode == read){
+    page->EmptyItOut();
+    *page = *temp_page;
+  }
+ 
+  // change mode to write, if was already write, no affect
+  mode = write;
+  
+  if (!page->Append(&rec)){  // if gaurd would try appending record to page
+    //Page copy_page = *page;
+    heap->AddPage(page, heap->GetLength() ); // add current page to file
+    page->EmptyItOut(); // flush page
+    page->Append(&rec); // call self to add record again
+  } 
+
+}
+
+int DBFile::GetNext (Record &fetchme) {
+  // check mode
+  // if write mode, save contents of current page, set read mode on, fetch last read page
+
+  if(mode == write){
+    temp_page->EmptyItOut();
+    *temp_page = *page;
+    page->EmptyItOut();
+    mode = read;
+    heap->GetPage(page, read_page_idx );
+  }
+
+  int counter = 0;
+  while(counter++ < records_read)
+    page->GetFirst(&fetchme);
+
+  if (! page->GetFirst(&fetchme)){
+    if (read_page_idx == heap->GetLength() - 1)
+      return 0;
+    page->EmptyItOut();
+    heap->GetPage(page, ++read_page_idx);
+    this->MoveFirst();
+    return (page->GetFirst(&fetchme) != 0);
+  }
+
+  return 1; // success
+}
+
+int DBFile::GetNext (Record &fetchme, CNF &cnf, Record &literal) {
+  // call the other GetNext till the record and literal matches
+  ComparisonEngine comp;
+  int found = 1;
+  // break from while loop when compare matches or reached end of file
+  while((! comp.Compare (&fetchme, &literal, &cnf)) && (found == 1))
+	  found = this->GetNext(fetchme);
+
+  if (found == 0)
+    return 0;
+  
+  return 1;
+}
+
+DBFile::~DBFile () {
+  // cleanliness is godliness
+  delete heap;
+  delete page;
+
+}
